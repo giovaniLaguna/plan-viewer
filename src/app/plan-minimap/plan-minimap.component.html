@@ -1,0 +1,14 @@
+<div class="minimap">
+  <div style="display: grid; grid-template-columns: auto 1fr auto; column-gap: 1rem;">
+    zoom:
+    <input type="number" style="width: auto" [ngModel]="planViewerComponent.config.zoom"
+      (ngModelChange)="planViewerComponent.setZoom($event)">
+    <button (click)="planViewerComponent.applyAutoZoom()">Auto</button>
+
+    escala:
+    <input type="number" style="width: auto" [ngModel]="planViewerComponent.config.scale"
+      (ngModelChange)="planViewerComponent.setScale($event)">
+    <button (click)="planViewerComponent.applyAutoScale()">Auto</button>
+  </div>
+  <canvas #canvas style="display: block;"></canvas>
+</div>

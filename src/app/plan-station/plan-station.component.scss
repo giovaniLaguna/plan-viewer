@@ -1,0 +1,25 @@
+:host {
+  display: block;
+  position: absolute;
+  width: 0;
+  height: 0;
+  left: 0;
+  top: 0;
+  background-color: transparent;
+}
+
+.bullet {
+  width: 2rem;
+  height: 2rem;
+  line-height: 2rem;
+  border-radius: 100%;
+  background-color: black;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-align: center;
+  font-family: sans-serif;
+  transform: translateX(-50%) translateY(-50%);
+  cursor: pointer;
+}
+

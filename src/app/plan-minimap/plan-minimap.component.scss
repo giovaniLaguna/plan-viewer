@@ -1,0 +1,13 @@
+:host {
+  display: block;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+
+.minimap {
+  border: 2px solid black;
+  margin-right: 1rem;
+  margin-bottom: 1rem;
+  background-color: white;
+}
