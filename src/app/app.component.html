@@ -1,9 +1,13 @@
 <div style="border: 2px solid black; width: 100vw; height: 100vh;">
   <!-- <app-plan-viewer src="https://i.pinimg.com/564x/cf/23/a9/cf23a9d9b7326ffc5cdc40171a7c8150.jpg"></app-plan-viewer> -->
-  <app-plan-viewer src="https://www.creatopy.com/blog/wp-content/uploads/2019/05/standard-banner-sizes-1.jpg">
-    <app-plan-room>
+  <app-plan-viewer src="https://www.creatopy.com/blog/wp-content/uploads/2019/05/standard-banner-sizes-1.jpg"
+    (mouseDraw)="onDraw($event)">
+    <!-- <app-plan-room>
       <app-plan-station></app-plan-station>
-    </app-plan-room>
+    </app-plan-room> -->
+
+    <app-plan-room *ngIf="newDraw" [position]="newDraw.position" [size]="newDraw.size"></app-plan-room>
+
     <app-plan-minimap></app-plan-minimap>
   </app-plan-viewer>
 </div>

@@ -1,24 +1,51 @@
 import { DOCUMENT } from '@angular/common';
 import { Directive, ElementRef, Inject, Output, EventEmitter, Input } from '@angular/core';
-import { debounce, filter, fromEvent, map, merge, of, Subject, switchMap, take, takeUntil, throttleTime } from 'rxjs';
+import { debounce, filter, fromEvent, map, merge, of, Subject, switchMap, take, takeUntil, throttleTime, Observable } from 'rxjs';
 
-interface DragEvent {
-  eventType: 'dragstart' | 'dragging' | 'dragend',
-  startPosition: {
-    x: number;
-    y: number;
-  },
-  position: {
-    x: number;
-    y: number;
-  }
-}
+export class MouseDragEvent {
+  static fromMouseEvent(event: MouseEvent, startPosition?: { x: number, y: number }) {
+    const type = event.type == 'mousedown' ? 'dragstart' : event.type == 'mouseup' ? 'dragend' : 'drag';
 
-interface DragEventWithOffset extends DragEvent {
-  offset: {
-    x: number;
-    y: number;
+    const position = {
+      x: event.clientX,
+      y: event.clientY,
+    }
+
+    const _startPosition = startPosition ? {
+      x: startPosition.x,
+      y: startPosition.y
+    }: {
+      x: position.x,
+      y: position.y,
+    }
+
+    return new MouseDragEvent(
+      type,
+      position,
+      _startPosition
+    );
+
   }
+
+  constructor(
+    public type: 'dragstart' | 'drag' | 'dragend',
+    public position: {
+      x: number,
+      y: number,
+    },
+    public startPosition: {
+      x: number,
+      y: number,
+    }
+  ) { }
+
+  getOffsetPosition() {
+    return {
+      x: this.position.x - this.startPosition.x,
+      y: this.position.y - this.startPosition.y,
+    };
+  }
+
 }
 
 
@@ -27,54 +54,36 @@ export function observeDraggingToElement(config: {
   document: HTMLElement,
   throttleDuration?: number,
   filter?: (event: MouseEvent) => boolean
-}) {
+}): Observable<Observable<MouseDragEvent>> {
   const mouseDown$ = fromEvent<MouseEvent>(config.element, "mousedown").pipe(
     filter(config.filter ?? (() => true))
   );
   const mouseUp$ = fromEvent<MouseEvent>(config.document, "mouseup");
 
   return mouseDown$.pipe(
-    map(e => ({
-      type: 'dragstart',
-      startPosition: {
-        x: e.clientX,
-        y: e.clientY,
-      },
-      position: {
-        x: e.clientX,
-        y: e.clientY
-      }
-    })),
-    map((dragStartEvent) => merge(
+    map(event => new MouseDragEvent(
+      'dragstart', // type
+      { x: event.clientX, y: event.clientY }, // position
+      { x: event.clientX, y: event.clientY }, // start position
+    )),
+    map((dragStartEvent: MouseDragEvent) => merge(
       of(dragStartEvent),
       fromEvent<MouseEvent>(config.document, "mousemove").pipe(
-        map(e => ({
-          type: 'dragging',
-          startPosition: {
-            x: dragStartEvent.startPosition.x,
-            y: dragStartEvent.startPosition.y,
-          },
-          position: {
-            x: e.clientX,
-            y: e.clientY
-          }
-        })),
+        map(event => new MouseDragEvent(
+          'drag', // type
+          { x: event.clientX, y: event.clientY }, // position
+          { x: dragStartEvent.startPosition.x, y: dragStartEvent.startPosition.y, }, // start position
+        )),
         throttleTime(config.throttleDuration ?? 1),
         takeUntil(mouseUp$),
       ),
       mouseUp$.pipe(
         take(1),
-        map(e => ({
-          type: 'dragend',
-          startPosition: {
-            x: dragStartEvent.startPosition.x,
-            y: dragStartEvent.startPosition.y,
-          },
-          position: {
-            x: e.clientX,
-            y: e.clientY
-          }
-        }))
+        map(event => new MouseDragEvent(
+          'dragend', // type
+          { x: event.clientX, y: event.clientY }, // position
+          { x: dragStartEvent.startPosition.x, y: dragStartEvent.startPosition.y, }, // start position
+        )),
       )
     )
     ),
@@ -90,10 +99,10 @@ export class DragDirective {
 
   @Input() throttleDuration = 1;
 
-  @Output() dragStart = new EventEmitter<DragEventWithOffset>();
-  @Output() dragging = new EventEmitter<DragEventWithOffset>();
-  @Output() dragEnd = new EventEmitter<DragEventWithOffset>();
-  @Output() drag = new EventEmitter<DragEventWithOffset>();
+  @Output() dragStart = new EventEmitter<MouseDragEvent>();
+  @Output() dragging = new EventEmitter<MouseDragEvent>();
+  @Output() dragEnd = new EventEmitter<MouseDragEvent>();
+  @Output() drag = new EventEmitter<MouseDragEvent>();
 
   constructor(
     elementRef: ElementRef<HTMLElement>,

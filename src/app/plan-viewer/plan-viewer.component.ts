@@ -2,11 +2,12 @@ import { DOCUMENT } from '@angular/common';
 import { THIS_EXPR } from '@angular/compiler/src/output/output_ast';
 import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, HostListener, Inject, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { Observable, tap, switchMap, animationFrames, map, Subject, animationFrameScheduler, observeOn, startWith, distinctUntilChanged } from 'rxjs';
-import { observeDraggingToElement } from '../drag.directive';
+import { MouseDragEvent, observeDraggingToElement } from '../drag.directive';
 import { PlanRoomComponent } from '../plan-room/plan-room.component';
 import { toObservableObject } from '../to-observable-object';
 
 type TPosition = { x: number, y: number };
+type TSize = { width: number, height: number };
 
 @Component({
   selector: 'app-plan-viewer',
@@ -38,7 +39,10 @@ export class PlanViewerComponent implements OnInit {
   @Output() positionChange = new EventEmitter<TPosition>();
   @Input() canMove = true;
 
-  @Output() mouseDraw = new EventEmitter();
+  @Output() mouseDraw = new EventEmitter<{
+    position: TPosition;
+    size: TSize;
+  }>();
 
   private element: HTMLElement;
   get height() { return this.element.clientHeight };
@@ -109,50 +113,82 @@ export class PlanViewerComponent implements OnInit {
     let i = 0;
     this.configChanges$.pipe(
       tap(x => console.log('configChanged', i++))
-    ).subscribe(() => {
-      this.draw();
-    });
+    ).subscribe(() => this.draw());
 
     const canvasDragEvent = observeDraggingToElement({
-      element: this.element,
+      element: this.canvasRef!.nativeElement,
       document: this.document
-    }).pipe(
-      switchMap((e) => {
-        const startCanvasPosition = { x: this.config.position.x * this.viewScale, y: this.config.position.y * this.viewScale };
-        return e.pipe(
-          map( event => ({ startCanvasPosition, event })),
-        );
-      })
+    });
+
+    const convertDragEventToDraw = (event: MouseDragEvent) => {
+      const offset = event.getOffsetPosition();
+
+      const size = {
+        width: Math.abs(offset.x),
+        height: Math.abs(offset.y),
+      }
+
+      const position = {
+        x: event.startPosition.x < event.position.x ?  event.startPosition.x : event.startPosition.x - size.width,
+        y: event.startPosition.y < event.position.y ?  event.startPosition.y : event.startPosition.y - size.height,
+      };
+
+      return {
+        size,
+        position
+      };
+    }
+
+    const draws$ = canvasDragEvent.pipe(
+      switchMap( dragEventsObservable => dragEventsObservable.pipe(
+        map( event => convertDragEventToDraw(event))
+      ))
     );
 
-    canvasDragEvent.subscribe(({ startCanvasPosition, event}) => {
-      if (this.canMove) {
-        const x = startCanvasPosition.x + event.position.x - event.startPosition.x;
-        const y = startCanvasPosition.y + event.position.y - event.startPosition.y;
+    const realScaleDraws$ = draws$.pipe(
+      map(draw => ({
+        position: {
+          x: draw.position.x / this.viewScale,
+          y: draw.position.y / this.viewScale,
+        },
+        size: {
+          width: draw.size.width / this.viewScale,
+          height: draw.size.height / this.viewScale,
+        },
+      })
+    ));
 
-        const imageCanvasSize = {
-          height: this.image.height * this.viewScale,
-          width: this.image.width * this.viewScale,
-        }
+    realScaleDraws$.subscribe(draw => this.mouseDraw.next(draw));
 
-        const maxY = Math.max(this.height - imageCanvasSize.height, 0);
-        const minY = Math.min(this.height - imageCanvasSize.height, 0);
-        const maxX = Math.max(this.width - imageCanvasSize.width, 0);
-        const minX = Math.min(this.width - imageCanvasSize.width, 0);
 
-        const canvasPosition = {
-          x: x > maxX ? maxX : (x < minX ? minX : x),
-          y: y > maxY ? maxY : (y < minY ? minY : y)
-        };
+    // canvasDragEvent.subscribe(({ startCanvasPosition, event}) => {
+    //   if (this.canMove) {
+    //     const x = startCanvasPosition.x + event.position.x - event.startPosition.x;
+    //     const y = startCanvasPosition.y + event.position.y - event.startPosition.y;
 
-        const position = {
-          x: canvasPosition.x / this.viewScale,
-          y: canvasPosition.y / this.viewScale,
-        };
+    //     const imageCanvasSize = {
+    //       height: this.image.height * this.viewScale,
+    //       width: this.image.width * this.viewScale,
+    //     }
 
-        this.setPosition(position);
-      }
-    });
+    //     const maxY = Math.max(this.height - imageCanvasSize.height, 0);
+    //     const minY = Math.min(this.height - imageCanvasSize.height, 0);
+    //     const maxX = Math.max(this.width - imageCanvasSize.width, 0);
+    //     const minX = Math.min(this.width - imageCanvasSize.width, 0);
+
+    //     const canvasPosition = {
+    //       x: x > maxX ? maxX : (x < minX ? minX : x),
+    //       y: y > maxY ? maxY : (y < minY ? minY : y)
+    //     };
+
+    //     const position = {
+    //       x: canvasPosition.x / this.viewScale,
+    //       y: canvasPosition.y / this.viewScale,
+    //     };
+
+    //     this.setPosition(position);
+    //   }
+    // });
   }
 
   applyAutoScale() {

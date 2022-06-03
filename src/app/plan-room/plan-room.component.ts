@@ -74,6 +74,11 @@ export class PlanRoomComponent implements OnInit {
     });
   }
 
+  ngOnChanges() {
+    console.log('changed');
+    this.update();
+  }
+
   update() {
     const viewScale = this.planViewerComponent.viewScale;
     const parentPosition = this.planViewerComponent.config.position;
