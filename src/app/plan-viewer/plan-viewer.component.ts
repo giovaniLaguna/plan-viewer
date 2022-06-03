@@ -39,10 +39,10 @@ export class PlanViewerComponent implements OnInit {
   @Output() positionChange = new EventEmitter<TPosition>();
   @Input() canMove = true;
 
-  @Output() mouseDraw = new EventEmitter<{
+  @Output() mouseDraw = new EventEmitter<Observable<{
     position: TPosition;
     size: TSize;
-  }>();
+  }>>();
 
   private element: HTMLElement;
   get height() { return this.element.clientHeight };
@@ -139,24 +139,23 @@ export class PlanViewerComponent implements OnInit {
       };
     }
 
-    const draws$ = canvasDragEvent.pipe(
-      switchMap( dragEventsObservable => dragEventsObservable.pipe(
-        map( event => convertDragEventToDraw(event))
+    const realScaleDraws$ = canvasDragEvent.pipe(
+      map( dragEventsObservable => dragEventsObservable.pipe(
+        // converte para um desenho
+        map( event => convertDragEventToDraw(event)),
+        // escala o desenho para o tamanho real
+        map( draw => ({
+          position: {
+            x: draw.position.x / this.viewScale,
+            y: draw.position.y / this.viewScale,
+          },
+          size: {
+            width: draw.size.width / this.viewScale,
+            height: draw.size.height / this.viewScale,
+          },
+        }))
       ))
     );
-
-    const realScaleDraws$ = draws$.pipe(
-      map(draw => ({
-        position: {
-          x: draw.position.x / this.viewScale,
-          y: draw.position.y / this.viewScale,
-        },
-        size: {
-          width: draw.size.width / this.viewScale,
-          height: draw.size.height / this.viewScale,
-        },
-      })
-    ));
 
     realScaleDraws$.subscribe(draw => this.mouseDraw.next(draw));
 

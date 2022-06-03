@@ -1,3 +1,4 @@
+import { KeyValue } from '@angular/common';
 import { Component } from '@angular/core';
 import { Observable } from 'rxjs';
 import { MouseDragEvent } from './drag.directive';
@@ -11,8 +12,8 @@ type TPosition = { x: number, y: number };
 })
 export class AppComponent {
   title = 'plan-viewer';
-
-  newDraw?: {
+  newDrawCount = 0;
+  newDraws: Map<string, {
     position: {
       x: number,
       y: number,
@@ -21,9 +22,9 @@ export class AppComponent {
       width: number,
       height: number,
     }
-  };
+  }> = new Map();
 
-  onDraw(event: {
+  onDraw(event: Observable<{
     position: {
       x: number,
       y: number,
@@ -32,7 +33,19 @@ export class AppComponent {
       width: number,
       height: number,
     }
-  }) {
-    this.newDraw = event;
+  }>) {
+    const id = 'newDraw-' + this.newDrawCount++;
+    event.subscribe(draw => {
+      const minimumSize = 10; // menor tamanho possivel de um desenho
+      if(draw.size.width > minimumSize && draw.size.height > minimumSize) {
+        this.newDraws.set(id, draw)
+      } else {
+        this.newDraws.delete(id);
+      }
+    });
+  }
+
+  trackByKey<K = any, V = any>(index: number, keyValue: KeyValue<K, V>) {
+    return keyValue.key;
   }
 }

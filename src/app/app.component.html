@@ -6,7 +6,9 @@
       <app-plan-station></app-plan-station>
     </app-plan-room> -->
 
-    <app-plan-room *ngIf="newDraw" [position]="newDraw.position" [size]="newDraw.size"></app-plan-room>
+    <ng-container *ngFor="let newDraw of newDraws | keyvalue, trackBy: trackByKey">
+      <app-plan-room [attr.id]="newDraw.key" [position]="newDraw.value.position" [size]="newDraw.value.size"></app-plan-room>
+    </ng-container>
 
     <app-plan-minimap></app-plan-minimap>
   </app-plan-viewer>
